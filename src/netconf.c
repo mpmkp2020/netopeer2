@@ -186,6 +186,238 @@ cleanup:
     return rc;
 }
 
+
+void
+print_val(const sr_val_t *value, char *buff)
+{
+    if (NULL == value) {
+        return;
+    }
+    buff += strlen(buff);
+    printf("%s ", value->xpath);
+
+    switch (value->type) {
+    case SR_CONTAINER_T:
+    case SR_CONTAINER_PRESENCE_T:
+        printf("(container)");
+        break;
+    case SR_LIST_T:
+        printf("(list instance)");
+        break;
+    case SR_STRING_T:
+        printf("= %s", value->data.string_val);
+        sprintf(buff, " %s", value->data.string_val);
+        break;
+    case SR_BOOL_T:
+        printf("= %s", value->data.bool_val ? "true" : "false");
+        sprintf(buff, " %s", value->data.bool_val ? "true" : "false");
+        break;
+    case SR_DECIMAL64_T:
+        printf("= %g", value->data.decimal64_val);
+        sprintf(buff, " %g", value->data.decimal64_val);
+        break;
+    case SR_INT8_T:
+        printf("= %" PRId8, value->data.int8_val);
+        sprintf(buff, " %" PRId8, value->data.int8_val);
+        break;
+    case SR_INT16_T:
+        printf("= %" PRId16, value->data.int16_val);
+        sprintf(buff, " %" PRId16, value->data.int16_val);
+        break;
+    case SR_INT32_T:
+        printf("= %" PRId32, value->data.int32_val);
+        sprintf(buff, " %" PRId32, value->data.int32_val);
+        break;
+    case SR_INT64_T:
+        printf("= %" PRId64, value->data.int64_val);
+        sprintf(buff, " %" PRId64, value->data.int64_val);
+        break;
+    case SR_UINT8_T:
+        printf("= %" PRIu8, value->data.uint8_val);
+        sprintf(buff, " %" PRIu8, value->data.uint8_val);
+        break;
+    case SR_UINT16_T:
+        printf("= %" PRIu16, value->data.uint16_val);
+        sprintf(buff, " %" PRIu16, value->data.uint16_val);
+        break;
+    case SR_UINT32_T:
+        printf("= %" PRIu32, value->data.uint32_val);
+        sprintf(buff, " %" PRIu32, value->data.uint32_val);
+        break;
+    case SR_UINT64_T:
+        printf("= %" PRIu64, value->data.uint64_val);
+        sprintf(buff, " %" PRIu64, value->data.uint64_val);
+        break;
+    case SR_IDENTITYREF_T:
+        printf("= %s", value->data.identityref_val);
+        sprintf(buff, " %s", value->data.identityref_val);
+        break;
+    case SR_INSTANCEID_T:
+        printf("= %s", value->data.instanceid_val);
+        sprintf(buff, " %s", value->data.instanceid_val);
+        break;
+    case SR_BITS_T:
+        printf("= %s", value->data.bits_val);
+        sprintf(buff, " %s", value->data.bits_val);
+        break;
+    case SR_BINARY_T:
+        printf("= %s", value->data.binary_val);
+        sprintf(buff, " %s", value->data.binary_val);
+        break;
+    case SR_ENUM_T:
+        printf("= %s", value->data.enum_val);
+        sprintf(buff, " %s", value->data.enum_val);
+        break;
+    case SR_LEAF_EMPTY_T:
+        printf("(empty leaf)");
+        break;
+    default:
+        printf("(unprintable)");
+        break;
+    }
+
+    switch (value->type) {
+    case SR_UNKNOWN_T:
+    case SR_CONTAINER_T:
+    case SR_CONTAINER_PRESENCE_T:
+    case SR_LIST_T:
+    case SR_LEAF_EMPTY_T:
+        printf("\n");
+        break;
+    default:
+        printf("%s\n", value->dflt ? " [default]" : "");
+        break;
+    }
+}
+
+int
+mplane_rpc_set_temperature_cb(sr_session_ctx_t *session, const char *path, const sr_val_t *input, const size_t input_cnt,
+        sr_event_t event, uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *private_data)
+{
+#define BUFSIZE 128
+#define MAX 1000
+    size_t i;
+    (void)session;
+    (void)event;
+    (void)request_id;
+    (void)private_data;
+    char buf[BUFSIZE];
+    char cmd[MAX]={0}, *p = NULL;
+    FILE *fp;
+    strcpy(cmd, "mpra ");
+    printf("\n\n =============== RPC \"%s\" RECEIVED: ===============\n\n", path);
+    for (i = 0; i < input_cnt; ++i) {
+
+	p=strrchr(input[i].xpath, '/');
+	if(strcmp(++p, "xpath") == 0) {
+	    p = strchr(path, ':');
+	    *(++p) = '\0';
+	    p = cmd + strlen(cmd);
+	    sprintf(p, "%s", path);
+	    p = cmd + strlen(cmd);
+            sprintf(p, "%s", input[i].data.string_val);
+	    continue;
+        }
+        print_val(&input[i], cmd);
+    }
+    printf("\n COMMAND: %s", cmd);
+
+    if ((fp = popen(cmd, "r")) == NULL) {
+        printf("Error opening pipe!\n");
+        return -1;
+    }
+
+    while (fgets(buf, BUFSIZE, fp) != NULL) {
+        printf("\nOUTPUT: %s", buf);
+    }
+
+    if(pclose(fp))  {
+        printf("Command not found or exited with error status\n");
+        return -1;
+    }
+
+    /* generate some output */
+    *output = malloc((sizeof **output)*2);
+    *output_cnt = 2;
+
+    (*output)[0].xpath = strdup("/aircond:change-temperature/msg");
+    (*output)[0].type = SR_STRING_T;
+    (*output)[0].dflt = 0;
+    (*output)[0].data.string_val = strdup("Set temperature");
+
+    (*output)[1].xpath = strdup("/aircond:change-temperature/ret");
+    (*output)[1].type = SR_STRING_T;
+    (*output)[1].dflt = 0;
+    (*output)[1].data.string_val = strdup(buf);
+    printf("\n\n =============== FINISHED PROCESSING RPC ===============\n\n");
+
+    return SR_ERR_OK;
+}
+
+int
+mplane_rpc_show_temperature_cb(sr_session_ctx_t *session, const char *path, const sr_val_t *input, const size_t input_cnt,
+        sr_event_t event, uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *private_data)
+{
+#define BUFSIZE 128
+#define MAX 1000
+    size_t i;
+    (void)session;
+    (void)event;
+    (void)request_id;
+    (void)private_data;
+    char buf[BUFSIZE];
+    char cmd[MAX]={0}, *p = NULL;
+    FILE *fp;
+    strcpy(cmd, "mpra ");
+    printf("\n\n =============== RPC \"%s\" RECEIVED: ===============\n\n", path);
+    for (i = 0; i < input_cnt; ++i) {
+
+	p=strrchr(input[i].xpath, '/');
+	if(strcmp(++p, "xpath") == 0) {
+	    p = strchr(path, ':');
+	    *(++p) = '\0';
+	    p = cmd + strlen(cmd);
+	    sprintf(p, "%s", path);
+	    p = cmd + strlen(cmd);
+            sprintf(p, "%s", input[i].data.string_val);
+	    continue;
+        }
+        print_val(&input[i], cmd);
+    }
+    printf("\n COMMAND: %s", cmd);
+
+    if ((fp = popen(cmd, "r")) == NULL) {
+        printf("Error opening pipe!\n");
+        return -1;
+    }
+
+    while (fgets(buf, BUFSIZE, fp) != NULL) {
+        printf("\nOUTPUT: %s", buf);
+    }
+
+    if(pclose(fp))  {
+        printf("Command not found or exited with error status\n");
+        return -1;
+    }
+
+    /* generate some output */
+    *output = malloc((sizeof **output)*2);
+    *output_cnt = 2;
+
+    (*output)[0].xpath = strdup("/aircond:show-temperature/msg");
+    (*output)[0].type = SR_STRING_T;
+    (*output)[0].dflt = 0;
+    (*output)[0].data.string_val = strdup("Returned temperature");
+
+    (*output)[1].xpath = strdup("/aircond:show-temperature/ret");
+    (*output)[1].type = SR_STRING_T;
+    (*output)[1].dflt = 0;
+    (*output)[1].data.string_val = strdup(buf);
+    printf("\n\n =============== FINISHED PROCESSING RPC ===============\n\n");
+
+    return SR_ERR_OK;
+}
+
 int
 np2srv_rpc_get_cb(sr_session_ctx_t *session, const char *op_path, const struct lyd_node *input, sr_event_t event,
         uint32_t UNUSED(request_id), struct lyd_node *output, void *UNUSED(private_data))
