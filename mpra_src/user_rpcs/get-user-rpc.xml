@@ -1,0 +1,5 @@
+<show-temperature xmlns="urn:aircond">
+    <request>GET</request>
+    <datastore>running</datastore>
+    <xpath>aircond-state/temperature</xpath>
+</show-temperature>
