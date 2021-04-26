@@ -5,13 +5,15 @@ typedef enum
     CRIT_LOG
 } logleve_t;
 
-typedef enum 
+typedef enum
 {
-    SET,
-    GET
+    SET_CMD,
+    GET_CMD,
+    STOP_CMD,
+    INVALID_CMD
 } operation_t;
 
-typedef enum 
+typedef enum
 {
     SND,
     RCV

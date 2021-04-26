@@ -219,13 +219,9 @@ void mplane_append_in_command_buff(const sr_val_t *value, char *command_buff)
     command_buff += strlen(command_buff);
     sprintf(command_buff, "%s%c", field, DELIMETER);
     command_buff += strlen(command_buff);
-    if(!strcmp(field, "xpath"))
+    if(!strcmp(field, "xpath") && value->data.string_val[0] != '/')
     {
-        dup_str = strdup(value->xpath);
-        p = strchr(dup_str, ':');
-        *(p+1) = '\0';
-        sprintf(command_buff, "%s", dup_str);
-	free(dup_str);
+        sprintf(command_buff, "%s", "/");
         command_buff += strlen(command_buff);
     }
 
@@ -537,6 +533,38 @@ mplane_rpc_set_temperature_cb(sr_session_ctx_t *session, const char *path, const
 }
 
 int
+mplane_rpc_edit_antenna_cb(sr_session_ctx_t *session, const char *path, const sr_val_t *input, const size_t input_cnt,
+        sr_event_t event, uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *private_data)
+{
+    (void)session;
+    (void)event;
+    (void)request_id;
+    (void)private_data;
+    int retcode = 0;
+    input_t *mpra_input;
+    output_t *mpra_output = NULL;
+    LOG(INFO_LOG, "=============== RPC \"%s\" RECEIVED: ===============", path);
+
+    LOG(INFO_LOG, "Processing rpc input");
+    mpra_input = mplane_parse_rpc_input(input, input_cnt);
+    LOG(INFO_LOG, "Rrepared cmd buff from rpc input: %s", mpra_input->buff);
+
+    LOG(INFO_LOG, "Sending cmd buff to MPRA");
+    mplane_snd_rcv(mpra_input, NULL, SND);
+    LOG(INFO_LOG, "Sent cmd buff to MPRA");
+
+    LOG(INFO_LOG, "Waiting for cmd response from MPRA");
+    mplane_snd_rcv(NULL, &mpra_output, RCV);
+    LOG(INFO_LOG, "Received response from MPRA");
+    LOG(INFO_LOG, "Received content: %s", mpra_output->buff);
+    LOG(INFO_LOG, "=============== FINISHED PROCESSING RPC ===============");
+
+    retcode = mpra_output->retcode;
+    release_in_out_buff(mpra_input, mpra_output);
+    return retcode;
+}
+
+int
 mplane_rpc_show_temperature_cb(sr_session_ctx_t *session, const char *path, const sr_val_t *input, const size_t input_cnt,
         sr_event_t event, uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *private_data)
 {
@@ -566,12 +594,12 @@ mplane_rpc_show_temperature_cb(sr_session_ctx_t *session, const char *path, cons
     *output = malloc((sizeof **output)*2);
     *output_cnt = 2;
 
-    (*output)[0].xpath = strdup("/aircond:show-temperature/msg");
+    (*output)[0].xpath = strdup("/mplane-rpcs:show-temperature/msg");
     (*output)[0].type = SR_STRING_T;
     (*output)[0].dflt = 0;
     (*output)[0].data.string_val = strdup("Returned temperature");
 
-    (*output)[1].xpath = strdup("/aircond:show-temperature/ret");
+    (*output)[1].xpath = strdup("/mplane-rpcs:show-temperature/ret");
     (*output)[1].type = SR_STRING_T;
     (*output)[1].dflt = 0;
     (*output)[1].data.string_val = strdup(mpra_output->buff);

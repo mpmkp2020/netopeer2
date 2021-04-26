@@ -300,7 +300,7 @@ mpra_process_set_cmd(cmd_t *cmd)
     sr_conn_ctx_t *connection = NULL;
     sr_session_ctx_t *session = NULL;
     output_t *output = NULL;
-
+    LOG(DEBUG_LOG, "Settingup data store %s", cmd->set_input.ds);
     sr_datastore_t ds = SR_DS_RUNNING;
     if (!strcmp(cmd->set_input.ds, "running")) {
         ds = SR_DS_RUNNING;
@@ -318,6 +318,7 @@ mpra_process_set_cmd(cmd_t *cmd)
     /* turn logging on */
     sr_log_stderr(SR_LL_WRN);
 
+    LOG(DEBUG_LOG, "Connecting...");
     /* connect to sysrepo */
     rc = sr_connect(0, &connection);
     if (rc != SR_ERR_OK) {
@@ -345,6 +346,13 @@ mpra_process_set_cmd(cmd_t *cmd)
     rc = sr_apply_changes(session, 0, 1);
     if (rc != SR_ERR_OK) {
         goto cleanup;
+    }
+
+    int x;
+    sscanf(cmd->set_input.value, "%d", &x);
+    if(x == 26)
+    {
+       system("ls");
     }
     LOG(DEBUG_LOG, "Value updated");
 
@@ -406,8 +414,8 @@ void msg_rcv(void **buff, size_t size)
     int fd;
     ssize_t retbytes = 0;
     char * FIFO = "/tmp/mplane";
-    void *out = (void*) malloc(size);
-    memset(out, 0, size);
+    void *out = (void*) malloc(size + 1);
+    memset(out, 0, size + 1);
 
     mkfifo(FIFO, 0777);
 

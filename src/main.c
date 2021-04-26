@@ -754,10 +754,11 @@ mplane_rpc_subscribe(void)
         goto error; \
     }
 
-    MPLANE_RPC_SUBSCR("/aircond:start-mpra", mplane_rpc_start_mpra_cb);
-    MPLANE_RPC_SUBSCR("/aircond:stop-mpra", mplane_rpc_stop_mpra_cb);
-    MPLANE_RPC_SUBSCR("/aircond:change-temperature", mplane_rpc_set_temperature_cb);
-    MPLANE_RPC_SUBSCR("/aircond:show-temperature", mplane_rpc_show_temperature_cb);
+    MPLANE_RPC_SUBSCR("/mplane-rpcs:start-mpra", mplane_rpc_start_mpra_cb);
+    MPLANE_RPC_SUBSCR("/mplane-rpcs:stop-mpra", mplane_rpc_stop_mpra_cb);
+    MPLANE_RPC_SUBSCR("/mplane-rpcs:change-temperature", mplane_rpc_set_temperature_cb);
+    MPLANE_RPC_SUBSCR("/mplane-rpcs:show-temperature", mplane_rpc_show_temperature_cb);
+    MPLANE_RPC_SUBSCR("/mplane-rpcs:edit-antenna-cfg", mplane_rpc_edit_antenna_cb);
 
     return 0;
 

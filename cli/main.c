@@ -129,7 +129,7 @@ int
 main(void)
 {
     #if RUN_AS_LOCAL_APP
-      #define CMD_COUNTS 10
+      #define CMD_COUNTS 11
       char user_commands[CMD_COUNTS][60]={
                               //"connect --login root root",
                               "connect --host 192.168.2.152 --port 830 --login root",
@@ -139,9 +139,10 @@ main(void)
                               "user-rpc --content /tmp/get-user-rpc.xml",
                               "user-rpc --content /tmp/set-user-27-rpc.xml",
                               "user-rpc --content /tmp/get-user-rpc.xml",
-			      "user-rpc --content /tmp/stop-mpra-rpc.xml",
-			      "disconnect",
-			      "quit",
+                              "user-rpc --content /tmp/set-user-bool-rpc.xml",
+                              "user-rpc --content /tmp/stop-mpra-rpc.xml",
+                              "disconnect",
+                              "quit",
                             };
       int i_cmd=0;
     #endif
